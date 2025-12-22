@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 from uuid import uuid4
 
 import httpx
@@ -9,19 +10,22 @@ from a2a.client import (
     Consumer,
 )
 from a2a.types import (
+    DataPart,
     Message,
     Part,
     Role,
     TextPart,
-    DataPart,
 )
-
 
 DEFAULT_TIMEOUT = 300
 
 
 def create_message(
-    *, role: Role = Role.user, text: str, context_id: str | None = None
+    *,
+    role: Role = Role.user,
+    text: str,
+    context_id: str | None = None,
+    metadata: Optional[dict] = None,
 ) -> Message:
     return Message(
         kind="message",
@@ -29,6 +33,7 @@ def create_message(
         parts=[Part(TextPart(kind="text", text=text))],
         message_id=uuid4().hex,
         context_id=context_id,
+        metadata=metadata,
     )
 
 
@@ -49,6 +54,7 @@ async def send_message(
     streaming: bool = False,
     timeout: int = DEFAULT_TIMEOUT,
     consumer: Consumer | None = None,
+    metadata: Optional[dict] = None,
 ):
     """Returns dict with context_id, response and status (if exists)"""
     async with httpx.AsyncClient(timeout=timeout) as httpx_client:
@@ -63,7 +69,9 @@ async def send_message(
         if consumer:
             await client.add_event_consumer(consumer)
 
-        outbound_msg = create_message(text=message, context_id=context_id)
+        outbound_msg = create_message(
+            text=message, context_id=context_id, metadata=metadata
+        )
         last_event = None
         outputs = {"response": "", "context_id": None}
 
@@ -102,6 +110,7 @@ class Messenger:
         url: str,
         new_conversation: bool = False,
         timeout: int = DEFAULT_TIMEOUT,
+        metadata: Optional[dict] = None,
     ):
         """
         Communicate with another agent by sending a message and receiving their response.
@@ -120,6 +129,7 @@ class Messenger:
             base_url=url,
             context_id=None if new_conversation else self._context_ids.get(url, None),
             timeout=timeout,
+            metadata=metadata,
         )
         if outputs.get("status", "completed") != "completed":
             raise RuntimeError(f"{url} responded with: {outputs}")
