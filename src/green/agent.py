@@ -1,3 +1,4 @@
+import json
 import re
 from typing import Dict
 
@@ -29,11 +30,10 @@ class Agent:
             updater: Report progress (update_status) and results (add_artifact)
         """
         input_text = get_message_text(message)
-        tags = parse_tags(input_text)
-        agent_urls = tags.get("white_agent_url", [])
-        if not agent_urls:
-            raise ValueError("No <white_agent_url> tags found in the input message.")
-        env = AsyncGameEnvironment(agent_urls=agent_urls)
+        data = json.loads(input_text)
+        participants = data.get("participants", {})
+        config = data.get("config", {})
+        env = AsyncGameEnvironment(participants=participants, config=config)
 
         await updater.update_status(
             TaskState.working, new_agent_text_message("Running Werewolf simulation...")

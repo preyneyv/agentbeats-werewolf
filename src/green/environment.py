@@ -22,7 +22,7 @@ DEFAULT_PLAYERS = [
     "Judy",
 ]
 MIN_GAME_SIZE = 6
-CONVERSATION_ITERATIONS = 3
+CONVERSATION_ROUNDS = 3
 
 
 class AsyncPlayer:
@@ -70,7 +70,7 @@ class AsyncPlayer:
 
 
 class AsyncGameEnvironment:
-    def __init__(self, agent_urls: List[str], player_count=MIN_GAME_SIZE):
+    def __init__(self, participants: dict[str, str], config: dict = None):
         self.players: List[AsyncPlayer] = []
         self.werewolf: AsyncPlayer = None
         self.seer: AsyncPlayer = None
@@ -82,11 +82,16 @@ class AsyncGameEnvironment:
         self.game_log: List[str] = []
         self.narration: List[str] = []
 
-        self._assign_roles(agent_urls, player_count)
+        self.participants = participants
+        config = config or {}
+        self.conv_rounds = config.get("conversation_rounds", CONVERSATION_ROUNDS)
+        if self.conv_rounds < 1 or self.conv_rounds > 5:
+            raise ValueError("conversation_rounds must be between 1 and 5.")
+        self._assign_roles(participants, config.get("player_count", MIN_GAME_SIZE))
 
-    def _assign_roles(self, agent_urls: List[str], player_count) -> None:
+    def _assign_roles(self, participants: dict[str, str], player_count) -> None:
         """Assign roles to all players"""
-        remote_count = len(agent_urls)
+        remote_count = len(participants)
         player_count = max(player_count, remote_count)
         if player_count > len(DEFAULT_PLAYERS):
             raise ValueError(
@@ -94,7 +99,11 @@ class AsyncGameEnvironment:
             )
         npc_count = max(player_count - remote_count, 0)
 
+        agent_names = list(participants.keys())
+        agent_urls = list(participants[n] for n in agent_names)
+
         names = DEFAULT_PLAYERS[:player_count]
+        names = agent_names + names[:npc_count]  # use provided names first
         roles = ["Werewolf", "Seer", "Medic"] + ["Villager"] * (player_count - 3)
         agent_urls = agent_urls + [None] * npc_count  # pad for local players
 
@@ -345,7 +354,7 @@ class AsyncGameEnvironment:
         for stmt in statements:
             self.log(f">>> {stmt}")
 
-        for i in range(CONVERSATION_ITERATIONS - 1):
+        for i in range(self.conv_rounds - 1):
             # notify players of everyone elses statements
             async def _notify_statements(player: AsyncPlayer, idx: int):
                 others_statements = "\n".join(
@@ -354,7 +363,7 @@ class AsyncGameEnvironment:
                 notify_message = (
                     f"The other players have made the following statements:\n"
                     f"{others_statements}\n\n"
-                    f"You may make {'your final statement before voting.' if i == CONVERSATION_ITERATIONS - 2 else 'another statement.'}"
+                    f"You may make {'your final statement before voting.' if i == self.conv_rounds - 2 else 'another statement.'}"
                 )
                 new_statement = await player.send(notify_message)
                 return f'{player.name}: "{new_statement}"'
