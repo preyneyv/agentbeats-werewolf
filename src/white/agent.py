@@ -2,8 +2,13 @@ from a2a.server.tasks import TaskUpdater
 from a2a.types import Message, Part, TextPart
 from a2a.utils import get_message_text
 
+from .player import Player
+
 
 class Agent:
+    def __init__(self):
+        self.player = Player()
+
     async def run(self, message: Message, updater: TaskUpdater) -> None:
         """Implement your agent logic here.
 
@@ -16,7 +21,7 @@ class Agent:
         input_text = get_message_text(message)
         skip_response = (message.metadata or {}).get("skip_response", False)
         print(">>> " + input_text)
-        statement = await self.agent.handle(input_text, skip_response=skip_response)
+        statement = await self.player.handle(input_text, skip_response=skip_response)
         if not skip_response:
             print("<<< " + statement)
 

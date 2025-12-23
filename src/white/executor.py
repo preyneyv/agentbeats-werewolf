@@ -65,6 +65,7 @@ class Executor(AgentExecutor):
                     f"Agent error: {e}", context_id=context_id, task_id=task.id
                 )
             )
+            raise e
 
     async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
         raise ServerError(error=UnsupportedOperationError())
