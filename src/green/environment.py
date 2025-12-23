@@ -102,11 +102,13 @@ class AsyncGameEnvironment:
         agent_names = list(participants.keys())
         agent_urls = list(participants[n] for n in agent_names)
 
-        names = DEFAULT_PLAYERS[:player_count]
-        names = agent_names + names[:npc_count]  # use provided names first
-        roles = ["Werewolf", "Seer", "Medic"] + ["Villager"] * (player_count - 3)
+        legal_names = [n for n in DEFAULT_PLAYERS if n not in agent_names]
+        names = agent_names + random.sample(
+            legal_names, npc_count
+        )  # add names for NPCs
         agent_urls = agent_urls + [None] * npc_count  # pad for local players
 
+        roles = ["Werewolf", "Seer", "Medic"] + ["Villager"] * (player_count - 3)
         random.shuffle(roles)
 
         for name, role, agent_url in zip(names, roles, agent_urls):
