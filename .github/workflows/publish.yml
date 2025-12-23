@@ -35,6 +35,10 @@ jobs:
             build_args: |
               ROLE=white
               AGENT_MODEL=anthropic/claude-sonnet-4.5
+          - image: agentbeats-werewolf/qwen3-vl-32b-instruct
+            build_args: |
+              ROLE=white
+              AGENT_MODEL=qwen/qwen3-vl-32b-instruct
 
     # These permissions are required for the workflow to:
     # - Read repository contents (checkout code)
