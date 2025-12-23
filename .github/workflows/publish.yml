@@ -6,11 +6,35 @@ on:
     branches:
       - main
     tags:
-      - 'v*'  # Trigger on version tags like v1.0.0, v1.1.0
+      - "v*" # Trigger on version tags like v1.0.0, v1.1.0
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: agentbeats-werewolf/environment
+            build_args: |
+              ROLE=green
+          - image: agentbeats-werewolf/gemini-3-flash-preview
+            build_args: |
+              ROLE=white
+              AGENT_MODEL=google/gemini-3-flash-preview
+          - image: agentbeats-werewolf/gpt-5.2
+            build_args: |
+              ROLE=white
+              AGENT_MODEL=openai/gpt-5.2
+          - image: agentbeats-werewolf/grok-4.1-fast
+            build_args: |
+              ROLE=white
+              AGENT_MODEL=x-ai/grok-4.1-fast
+          - image: agentbeats-werewolf/claude-sonnet-4.5
+            build_args: |
+              ROLE=white
+              AGENT_MODEL=anthropic/claude-sonnet-4.5
 
     # These permissions are required for the workflow to:
     # - Read repository contents (checkout code)
@@ -37,7 +61,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          # Publish each image under your GHCR namespace:
+          # ghcr.io/<owner>/<image>
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
             # For tags like v1.0, create tag '1.0'
             type=semver,pattern={{version}}
@@ -54,6 +80,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
+          build-args: ${{ matrix.build_args }}
           # Only push if this is a push event (not a PR)
           # PRs will build but not push to avoid polluting the registry
           push: ${{ github.event_name != 'pull_request' }}
@@ -65,7 +92,9 @@ jobs:
       - name: Output image digest
         if: github.event_name != 'pull_request'
         run: |
-          echo "## Docker Image Published :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "## Docker Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Tags:** ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

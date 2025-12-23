@@ -14,6 +14,9 @@ RUN \
 ARG ROLE=green
 ENV ROLE=${ROLE}
 
+ARG AGENT_MODEL=google/gemini-3-flash-preview
+ENV AGENT_MODEL=${AGENT_MODEL}
+
 ENTRYPOINT ["uv", "run", "python", "-m", "src.main"]
 CMD ["--host", "0.0.0.0"]
 EXPOSE 9009
